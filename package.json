@@ -1,0 +1,9 @@
+{
+  "name": "mern-test-321rishikesh",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev:backend",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev"
+  }
+}
