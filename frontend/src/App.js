@@ -66,6 +66,18 @@ function App() {
     setMessage("");
   };
 
+  const handleUnauthorized = (message = "Session expired. Please login again.") => {
+    localStorage.removeItem("scms_token");
+    localStorage.removeItem("scms_student");
+    setToken("");
+    setStudent(null);
+    setCourses([]);
+    setSearch("");
+    setAuthMode("login");
+    setMessage("");
+    setError(message);
+  };
+
   const fetchCourses = async (searchTerm = "") => {
     try {
       setLoading(true);
@@ -80,6 +92,10 @@ function App() {
 
       const data = await response.json();
       if (!response.ok) {
+        if (response.status === 401) {
+          handleUnauthorized(data.message || "Not authorized");
+          return;
+        }
         throw new Error(data.message || "Failed to load courses");
       }
 
@@ -142,6 +158,10 @@ function App() {
 
       const data = await response.json();
       if (!response.ok) {
+        if (response.status === 401) {
+          handleUnauthorized(data.message || "Not authorized");
+          return;
+        }
         throw new Error(data.message || "Unable to create course");
       }
 
@@ -167,6 +187,10 @@ function App() {
 
       const data = await response.json();
       if (!response.ok) {
+        if (response.status === 401) {
+          handleUnauthorized(data.message || "Not authorized");
+          return;
+        }
         throw new Error(data.message || "Unable to delete course");
       }
 
