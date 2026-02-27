@@ -1,7 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const getApiBaseUrl = () => {
+  const envBase = (process.env.REACT_APP_API_URL || "").trim();
+  if (!envBase) {
+    return "/api";
+  }
+
+  const withoutTrailingSlash = envBase.replace(/\/+$/, "");
+  if (withoutTrailingSlash.endsWith("/api")) {
+    return withoutTrailingSlash;
+  }
+
+  return `${withoutTrailingSlash}/api`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const initialCourseState = {
   courseName: "",

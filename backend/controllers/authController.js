@@ -2,8 +2,16 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Student = require("../models/Student");
 
-const generateToken = (studentId) =>
-  jwt.sign({ id: studentId }, process.env.JWT_SECRET, { expiresIn: "7d" });
+const getJwtSecret = () => process.env.JWT_SECRET || process.env.JWT_ACCESS_SECRET;
+
+const generateToken = (studentId) => {
+  const jwtSecret = getJwtSecret();
+  if (!jwtSecret) {
+    throw new Error("JWT_SECRET is not configured");
+  }
+
+  return jwt.sign({ id: studentId }, jwtSecret, { expiresIn: "7d" });
+};
 
 const registerStudent = async (req, res, next) => {
   try {

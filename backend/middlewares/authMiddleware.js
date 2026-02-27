@@ -1,6 +1,8 @@
 const jwt = require("jsonwebtoken");
 const Student = require("../models/Student");
 
+const getJwtSecret = () => process.env.JWT_SECRET || process.env.JWT_ACCESS_SECRET;
+
 const protect = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization || "";
@@ -11,7 +13,13 @@ const protect = async (req, res, next) => {
       throw new Error("Not authorized, token missing");
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const jwtSecret = getJwtSecret();
+    if (!jwtSecret) {
+      res.status(500);
+      throw new Error("JWT_SECRET is not configured");
+    }
+
+    const decoded = jwt.verify(token, jwtSecret);
     const student = await Student.findById(decoded.id).select("-password");
 
     if (!student) {
