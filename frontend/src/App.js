@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import "./App.css";
 
 const getApiBaseUrl = () => {
-  const envBase = (process.env.REACT_APP_API_URL || "").trim();
+  const envBase = (process.env.REACT_APP_API_URL || process.env.VITE_BASE_URI || "").trim();
   if (!envBase) {
     return "/api";
   }
@@ -16,6 +17,9 @@ const getApiBaseUrl = () => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
+const apiClient = axios.create({
+  baseURL: API_BASE_URL
+});
 
 const initialCourseState = {
   courseName: "",
@@ -83,25 +87,21 @@ function App() {
       setLoading(true);
       clearNotifications();
 
-      const query = searchTerm.trim() ? `?search=${encodeURIComponent(searchTerm.trim())}` : "";
-      const response = await fetch(`${API_BASE_URL}/courses${query}`, {
+      const response = await apiClient.get("/courses", {
+        params: searchTerm.trim() ? { search: searchTerm.trim() } : {},
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        if (response.status === 401) {
-          handleUnauthorized(data.message || "Not authorized");
-          return;
-        }
-        throw new Error(data.message || "Failed to load courses");
-      }
-
-      setCourses(data);
+      setCourses(response.data);
     } catch (fetchError) {
-      setError(fetchError.message);
+      const statusCode = fetchError?.response?.status;
+      const errorMessage = fetchError?.response?.data?.message || fetchError.message;
+      if (statusCode === 401) {
+        handleUnauthorized(errorMessage || "Not authorized");
+        return;
+      }
+      setError(errorMessage || "Failed to load courses");
     } finally {
       setLoading(false);
     }
@@ -120,22 +120,13 @@ function App() {
           ? authForm
           : { email: authForm.email, password: authForm.password };
 
-      const response = await fetch(`${API_BASE_URL}/auth/${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "Authentication failed");
-      }
-
-      setSession(data);
+      const response = await apiClient.post(`/auth/${endpoint}`, payload);
+      setSession(response.data);
       setAuthForm(initialAuthState);
       setMessage(authMode === "register" ? "Registration successful" : "Login successful");
     } catch (authError) {
-      setError(authError.message);
+      const errorMessage = authError?.response?.data?.message || authError.message;
+      setError(errorMessage || "Authentication failed");
     } finally {
       setLoading(false);
     }
@@ -147,29 +138,22 @@ function App() {
 
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/courses`, {
-        method: "POST",
+      await apiClient.post("/courses", courseForm, {
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(courseForm)
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        if (response.status === 401) {
-          handleUnauthorized(data.message || "Not authorized");
-          return;
         }
-        throw new Error(data.message || "Unable to create course");
-      }
-
+      });
       setCourseForm(initialCourseState);
       setMessage("Course created");
       fetchCourses(search);
     } catch (courseError) {
-      setError(courseError.message);
+      const statusCode = courseError?.response?.status;
+      const errorMessage = courseError?.response?.data?.message || courseError.message;
+      if (statusCode === 401) {
+        handleUnauthorized(errorMessage || "Not authorized");
+        return;
+      }
+      setError(errorMessage || "Unable to create course");
     } finally {
       setLoading(false);
     }
@@ -180,24 +164,19 @@ function App() {
     try {
       setLoading(true);
 
-      const response = await fetch(`${API_BASE_URL}/courses/${courseId}`, {
-        method: "DELETE",
+      const response = await apiClient.delete(`/courses/${courseId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        if (response.status === 401) {
-          handleUnauthorized(data.message || "Not authorized");
-          return;
-        }
-        throw new Error(data.message || "Unable to delete course");
-      }
-
-      setMessage(data.message || "Course deleted");
+      setMessage(response.data?.message || "Course deleted");
       fetchCourses(search);
     } catch (deleteError) {
-      setError(deleteError.message);
+      const statusCode = deleteError?.response?.status;
+      const errorMessage = deleteError?.response?.data?.message || deleteError.message;
+      if (statusCode === 401) {
+        handleUnauthorized(errorMessage || "Not authorized");
+        return;
+      }
+      setError(errorMessage || "Unable to delete course");
     } finally {
       setLoading(false);
     }
